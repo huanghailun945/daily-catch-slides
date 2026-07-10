@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Daily Catch — Show & Tell</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ===========================================
+           CSS CUSTOM PROPERTIES (AMAZON GS BRAND)
+           =========================================== */
+        :root {
+            --orange: #FF6200;
+            --orange-dim: rgba(255, 98, 0, 0.15);
+            --white: #FFFFFF;
+            --ink: #161d26;
+            --purple1: #322896;
+            --purple2: #5A3CAA;
+            --text: #FFFFFF;
+            --text-secondary: rgba(255,255,255,0.8);
+            --text-dim: rgba(255,255,255,0.5);
+            --border: rgba(255,255,255,0.12);
+            --border-light: rgba(255,255,255,0.2);
+            --surface: rgba(255,255,255,0.06);
+            --surface-elevated: rgba(255,255,255,0.1);
+
+            --font-display: 'Plus Jakarta Sans', 'Microsoft YaHei', sans-serif;
+            --font-cn: 'Microsoft YaHei', sans-serif;
+            --font-mono: 'Consolas', 'Microsoft YaHei', monospace;
+
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --duration: 0.6s;
+
+            --stage-bg: #1a1040;
+            --slide-bg: transparent;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ===========================================
+           FIXED 16:9 STAGE: MANDATORY BASE STYLES
+           =========================================== */
+        html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg); }
+        .deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+        .deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; }
+        .slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; }
+        .slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+        img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+        @media print { html, body { width: 1920px; height: auto; overflow: visible; } .deck-viewport { position: static; overflow: visible; } .deck-stage { position: static; width: auto; height: auto; transform: none !important; } .slide { position: relative; display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; width: 1920px; height: 1080px; break-after: page; } .slide:last-child { break-after: auto; } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; } }
+
+        /* ===========================================
+           GRADIENT BACKGROUND (BRAND)
+           =========================================== */
+        .slide-bg {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, var(--ink) 0%, #1e1548 15%, var(--purple1) 35%, var(--purple2) 50%, var(--purple1) 65%, #1e1548 85%, var(--ink) 100%);
+        }
+
+        .slide-bg::after {
+            content: '';
+            position: absolute;
+            right: -100px;
+            bottom: -200px;
+            width: 1000px;
+            height: 1000px;
+            background: radial-gradient(ellipse, rgba(90, 60, 170, 0.25) 0%, rgba(255, 98, 0, 0.08) 40%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* ===========================================
+           ANIMATIONS
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity var(--duration) var(--ease-out-expo),
+                        transform var(--duration) var(--ease-out-expo);
+        }
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-24px);
+            transition: opacity var(--duration) var(--ease-out-expo),
+                        transform var(--duration) var(--ease-out-expo);
+        }
+        .slide.visible .reveal,
+        .slide.visible .reveal-left {
+            opacity: 1;
+            transform: translate(0);
+        }
+        .slide.visible .reveal:nth-child(1),
+        .slide.visible .reveal-left:nth-child(1) { transition-delay: 0.05s; }
+        .slide.visible .reveal:nth-child(2),
+        .slide.visible .reveal-left:nth-child(2) { transition-delay: 0.12s; }
+        .slide.visible .reveal:nth-child(3),
+        .slide.visible .reveal-left:nth-child(3) { transition-delay: 0.19s; }
+        .slide.visible .reveal:nth-child(4),
+        .slide.visible .reveal-left:nth-child(4) { transition-delay: 0.26s; }
+        .slide.visible .reveal:nth-child(5),
+        .slide.visible .reveal-left:nth-child(5) { transition-delay: 0.33s; }
+
+        /* ===========================================
+           SHARED SLIDE COMPONENTS
+           =========================================== */
+        .slide-pad {
+            position: relative;
+            padding: 80px 100px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+        }
+
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 48px;
+        }
+
+        .slide-header .page-num {
+            font-family: var(--font-mono);
+            font-size: 16px;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+        }
+
+        .section-tag {
+            font-family: var(--font-display);
+            font-size: 16px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--orange);
+            background: var(--orange-dim);
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .slide-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 64px;
+            color: var(--text);
+            letter-spacing: -1.5px;
+            line-height: 1.15;
+            margin-bottom: 36px;
+        }
+
+        .slide-title .hl { color: var(--orange); }
+
+        /* ===========================================
+           SLIDE 1: COVER
+           =========================================== */
+        .cover-slide .slide-pad {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 100px 120px;
+        }
+
+        .cover-event {
+            font-family: var(--font-display);
+            font-size: 18px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 48px;
+            font-weight: 700;
+        }
+
+        .cover-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 148px;
+            line-height: 1.0;
+            color: var(--text);
+            letter-spacing: -5px;
+        }
+
+        .cover-title .hl { color: var(--orange); }
+
+        .cover-subtitle {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 36px;
+            color: var(--text-secondary);
+            margin-top: 36px;
+            letter-spacing: -0.5px;
+        }
+
+        .cover-bottom {
+            position: absolute;
+            bottom: 100px;
+            left: 120px;
+            right: 120px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border);
+            padding-top: 32px;
+        }
+
+        .cover-author {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 22px;
+            color: var(--text);
+        }
+
+        .cover-date {
+            font-family: var(--font-display);
+            font-size: 18px;
+            color: var(--text-dim);
+            font-weight: 700;
+        }
+
+        /* ===========================================
+           SLIDE 2: PROBLEM + INSIGHT
+           =========================================== */
+        .problem-questions {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            flex: 1;
+        }
+
+        .pq-item {
+            display: flex;
+            align-items: baseline;
+            gap: 24px;
+        }
+
+        .pq-q {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 34px;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .pq-a {
+            font-family: var(--font-display);
+            font-size: 34px;
+            font-weight: 800;
+            color: var(--orange);
+            white-space: nowrap;
+        }
+
+        .problem-pain {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 28px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .insight-box {
+            margin-top: 32px;
+            padding: 36px 44px;
+            background: var(--surface-elevated);
+            border-left: 5px solid var(--orange);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .insight-box p {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 32px;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .insight-box .hl { color: var(--orange); }
+
+        /* ===========================================
+           SLIDE 3: THE SOLUTION
+           =========================================== */
+        .solution-tagline {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 28px;
+            color: var(--text-dim);
+            font-style: italic;
+            margin-bottom: 44px;
+        }
+
+        .pipeline-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            flex: 1;
+        }
+
+        .pipe-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .pipe-card:hover { border-color: var(--orange); }
+
+        .pipe-num {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--orange);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .pipe-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 30px;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .pipe-desc {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 22px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ===========================================
+           SLIDE 3: BEFORE & AFTER
+           =========================================== */
+        .before-after-grid {
+            display: grid;
+            grid-template-columns: 1fr 60px 1fr;
+            gap: 24px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .ba-col {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ba-before { border-color: rgba(255,255,255,0.15); }
+        .ba-after { border-color: var(--orange); box-shadow: 0 0 40px rgba(255, 98, 0, 0.1); }
+
+        .ba-label {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .ba-label-after { color: var(--orange); }
+
+        .ba-title {
+            font-family: var(--font-display);
+            font-size: 44px;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -1px;
+        }
+
+        .ba-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .ba-list li {
+            font-family: var(--font-display);
+            font-size: 28px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            padding-left: 28px;
+            position: relative;
+        }
+
+        .ba-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .ba-after .ba-list li::before { background: var(--orange); }
+
+        .ba-list li strong {
+            color: var(--orange);
+            font-weight: 700;
+        }
+
+        .ba-arrow {
+            font-size: 48px;
+            color: var(--orange);
+            text-align: center;
+        }
+
+        .ba-bottom {
+            margin-top: 28px;
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text);
+            text-align: center;
+            padding-top: 28px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ===========================================
+           SLIDE 4: BLUEPRINT
+           =========================================== */
+        .blueprint-intro {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 24px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+
+        .blueprint-body {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 36px;
+            flex: 1;
+        }
+
+        .quadrant {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr 1fr auto;
+            gap: 14px;
+        }
+
+        .q-label-y {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .q-cell {
+            padding: 16px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(255,255,255,0.04);
+        }
+
+        .q-cell-name {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--orange);
+        }
+
+        .q-cell-desc {
+            font-family: var(--font-display);
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .q-cell-examples {
+            font-family: var(--font-display);
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .q-axis-bottom {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .bp-table-wrap {
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .bp-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-family: var(--font-display);
+            font-size: 16px;
+        }
+
+        .bp-table thead th {
+            font-family: var(--font-display);
+            font-size: 13px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .bp-table tbody td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: top;
+            line-height: 1.4;
+            font-size: 15px;
+        }
+
+        .bp-table tbody tr:last-child td { border-bottom: none; }
+
+        .bp-table tbody td:first-child {
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        .bp-table tbody td:nth-child(2) {
+            color: var(--orange);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* ===========================================
+           SLIDE 5: HOW I BUILT IT
+           =========================================== */
+        .house-flow {
+            display: flex;
+            align-items: stretch;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .house-step {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .house-icon {
+            font-size: 40px;
+            margin-bottom: 4px;
+        }
+
+        .house-label {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 36px;
+            color: var(--text);
+        }
+
+        .house-desc {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 24px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .house-map {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 22px;
+            color: var(--text-secondary);
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            width: 100%;
+        }
+
+        .house-arrow {
+            display: flex;
+            align-items: center;
+            font-size: 44px;
+            color: var(--orange);
+            font-weight: 700;
+        }
+
+        .hl-inline {
+            color: var(--orange);
+            font-weight: 700;
+        }
+
+        .role-boxes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .role-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .role-me { border-left: 4px solid var(--text-secondary); }
+        .role-ai { border-left: 4px solid var(--orange); }
+
+        .role-label {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 24px;
+            color: var(--text);
+        }
+
+        .role-desc {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 22px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .crew-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 20px;
+            margin-top: auto;
+        }
+
+        .crew-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 8px;
+            transition: border-color 0.3s ease;
+        }
+
+        .crew-card:hover { border-color: var(--orange); }
+
+        .crew-icon { font-size: 42px; }
+
+        .crew-name {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 24px;
+            color: var(--orange);
+        }
+
+        .crew-role {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 22px;
+            color: var(--text);
+        }
+
+        .crew-line {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 19px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* ===========================================
+           SLIDE 6: BLUEPRINT TABLE (FULL PAGE)
+           =========================================== */
+        .bp-table-wrap-full {
+            flex: 1;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .bp-table-full {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-family: var(--font-display);
+        }
+
+        .bp-table-full thead th {
+            font-size: 22px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--orange);
+            padding: 22px 32px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .bp-table-full tbody td {
+            padding: 18px 32px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: top;
+            line-height: 1.4;
+            font-size: 24px;
+        }
+
+        .bp-table-full tbody tr:last-child td { border-bottom: none; }
+
+        .bp-table-full tbody td:first-child {
+            color: var(--text);
+            font-weight: 700;
+            font-size: 26px;
+        }
+
+        .bp-table-full tbody td:nth-child(2) {
+            color: var(--orange);
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        /* ===========================================
+           SLIDE 4: DEMO (MINIMAL)
+           =========================================== */
+        .demo-slide .slide-pad {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .demo-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 96px;
+            color: var(--text);
+            letter-spacing: -3px;
+            margin-bottom: 32px;
+        }
+
+        .demo-title .hl { color: var(--orange); }
+
+        .demo-subtitle {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 36px;
+            color: var(--text-secondary);
+        }
+
+        /* ===========================================
+           SLIDE 6: TAKEAWAYS + WHAT'S NEXT
+           =========================================== */
+        .takeaways-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 60px;
+            flex: 1;
+        }
+
+        .ta-section-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--orange);
+            margin-bottom: 28px;
+            font-weight: 700;
+        }
+
+        .ta-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .ta-item {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+        }
+
+        .ta-num {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--orange);
+            min-width: 32px;
+            padding-top: 3px;
+        }
+
+        .ta-text {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .ta-text .secondary {
+            display: block;
+            font-size: 22px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .next-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .next-item {
+            padding: 24px 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: border-color 0.3s ease;
+        }
+
+        .next-item:hover { border-color: var(--orange); }
+
+        .next-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 28px;
+            color: var(--text);
+        }
+
+        .next-desc {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .closing-line {
+            margin-top: auto;
+            padding-top: 28px;
+            border-top: 1px solid var(--border);
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 22px;
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        /* ===========================================
+           PROGRESS BAR & PAGE COUNTER
+           =========================================== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--orange);
+            z-index: 9999;
+            transition: width 0.3s ease;
+        }
+
+        .page-counter {
+            position: fixed;
+            bottom: 28px;
+            right: 40px;
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dim);
+            z-index: 1000;
+        }
+
+        /* ===========================================
+           EDIT MODE
+           =========================================== */
+        .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+        .edit-toggle { position: fixed; top: 16px; left: 16px; width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 10001; color: white; }
+        .edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="page-counter" id="pageCounter"></div>
+
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+
+            <!-- ===== SLIDE 1: COVER ===== -->
+            <section class="slide cover-slide active visible">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <span class="cover-event reveal">Show &amp; Tell &bull; Edu AI Community</span>
+                    <h1 class="cover-title reveal">Amazon<br><span class="hl">Daily Catch</span></h1>
+                    <p class="cover-subtitle reveal">AI-Powered Daily Brief for Amazon Cross-Border Sellers</p>
+                    <div class="cover-bottom">
+                        <span class="cover-author reveal">Helen Huang</span>
+                        <span class="cover-date reveal">July 2026</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 2: PROBLEM + INSIGHT ===== -->
+            <section class="slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <div class="slide-header">
+                        <span class="page-num">02</span>
+                        <span class="section-tag">The Problem</span>
+                    </div>
+                    <div class="problem-questions">
+                        <div class="pq-item reveal">
+                            <span class="pq-q">How many seller-facing official WeChat accounts does Amazon have?</span>
+                            <span class="pq-a">&rarr; 8 <span style="font-size:16px; font-weight:400; color:rgba(255,255,255,0.5)">(AGS&times;3, Ads&times;2, AGL&times;2, AWS&times;1)</span></span>
+                        </div>
+                        <div class="pq-item reveal">
+                            <span class="pq-q">How many articles do they publish per week?</span>
+                            <span class="pq-a">&rarr; 20+</span>
+                        </div>
+                        <div class="pq-item reveal">
+                            <span class="pq-q">Have you &mdash; honestly &mdash; read all of them?</span>
+                        </div>
+                        <p class="problem-pain reveal">Maybe nobody does. Amazon <strong>DID</strong> publish the update, the deadline, the new tool, and the best practices — piece by piece, across 8 accounts. The answers are out there. But nobody reads all 8. And by the time they find it, it's too late.</p>
+                        <div class="insight-box reveal">
+                            <p>This is <span class="hl">NOT</span> a content problem. It's a <span class="hl">DELIVERY</span> problem.<br>The right information exists &mdash; it just doesn't reach the right person at the right time.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 3: THE SOLUTION (Before & After) ===== -->
+            <section class="slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <div class="slide-header">
+                        <span class="page-num">03</span>
+                        <span class="section-tag">The Solution</span>
+                    </div>
+                    <div class="before-after-grid">
+                        <div class="ba-col ba-before reveal-left">
+                            <span class="ba-label">BEFORE</span>
+                            <span class="ba-title">Reading in WeChat</span>
+                            <ul class="ba-list">
+                                <li>Scroll through 8 accounts randomly</li>
+                                <li>Long articles, no patience to finish</li>
+                                <li>No idea what's urgent vs. routine</li>
+                                <li>Same feed for everyone</li>
+                                <li>Miss deadlines, discover too late</li>
+                            </ul>
+                        </div>
+                        <div class="ba-arrow reveal">&#10132;</div>
+                        <div class="ba-col ba-after reveal">
+                            <span class="ba-label ba-label-after">AFTER — Daily Catch</span>
+                            <span class="ba-title">AI cooks it for you</span>
+                            <ul class="ba-list">
+                                <li><strong>Interpret</strong> — AI pulls out what matters: summary, action items, deadline</li>
+                                <li><strong>Classify</strong> — Must Read / Recommended / Others, by domain</li>
+                                <li><strong>Personalize</strong> — Your marketplace, your fulfillment type, your product category — the feed adapts to you</li>
+                                <li><strong>Deliver</strong> — One page. Everything you need, filtered and ranked</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <p class="ba-bottom reveal">Open one page. Everything you need to know today, already filtered and ranked for you.</p>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 4: DEMO ===== -->
+            <section class="slide demo-slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <h2 class="demo-title reveal"><span class="hl">Live</span> Demo</h2>
+                    <p class="demo-subtitle reveal">Let me show you what sellers see.</p>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 5: HOW I BUILT IT ===== -->
+            <section class="slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <div class="slide-header">
+                        <span class="page-num">05</span>
+                        <span class="section-tag">How I Built It</span>
+                    </div>
+                    <h2 class="slide-title reveal" style="font-size:52px; margin-bottom:40px;">Building with AI is like building a house.</h2>
+                    <div class="house-flow reveal">
+                        <div class="house-step">
+                            <div class="house-icon">&#9998;</div>
+                            <span class="house-label">Blueprint</span>
+                            <span class="house-desc">Draw the plan.<br>What rooms? What structure?</span>
+                            <span class="house-map">Define every component</span>
+                        </div>
+                        <div class="house-arrow">&rarr;</div>
+                        <div class="house-step">
+                            <div class="house-icon">&#9881;</div>
+                            <span class="house-label">Framework</span>
+                            <span class="house-desc">Steel, wood, or prefab?<br>Pick the right method per part.</span>
+                            <span class="house-map"><span class="hl-inline">Skill</span> · <span class="hl-inline">Loop</span> · <span class="hl-inline">Hook</span> · <span class="hl-inline">Agent</span></span>
+                        </div>
+                        <div class="house-arrow">&rarr;</div>
+                        <div class="house-step">
+                            <div class="house-icon">&#9876;</div>
+                            <span class="house-label">Build</span>
+                            <span class="house-desc">Owner inspects each stage.<br>Contractor does the work.</span>
+                            <span class="house-map">I brief + QC · AI develops + cross-checks</span>
+                        </div>
+                    </div>
+                    <div class="role-boxes reveal">
+                        <div class="role-box role-me">
+                            <span class="role-label">ME (the owner)</span>
+                            <span class="role-desc">Brief the problem · Judge output quality · Say what's wrong</span>
+                        </div>
+                        <div class="role-box role-ai">
+                            <span class="role-label">AI (the contractor)</span>
+                            <span class="role-desc">Design architecture · Write all code · Fix on feedback · Cross-validate</span>
+                        </div>
+                    </div>
+                    <div class="crew-row reveal">
+                        <div class="crew-card">
+                            <span class="crew-icon">&#128119;</span>
+                            <span class="crew-name">SKILL</span>
+                            <span class="crew-role">The Tradesman</span>
+                            <span class="crew-line">You assign, they execute. Same job every time.</span>
+                        </div>
+                        <div class="crew-card">
+                            <span class="crew-icon">&#127912;</span>
+                            <span class="crew-name">LOOP</span>
+                            <span class="crew-role">The Designer</span>
+                            <span class="crew-line">They propose, you review, repeat until right.</span>
+                        </div>
+                        <div class="crew-card">
+                            <span class="crew-icon">&#9889;</span>
+                            <span class="crew-name">HOOK</span>
+                            <span class="crew-role">The Sensor</span>
+                            <span class="crew-line">Set once, triggers automatically on event.</span>
+                        </div>
+                        <div class="crew-card">
+                            <span class="crew-icon">&#129504;</span>
+                            <span class="crew-name">AGENT</span>
+                            <span class="crew-role">The Consultant</span>
+                            <span class="crew-line">Describe the problem, they figure it out.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 6: BLUEPRINT TABLE ===== -->
+            <section class="slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <div class="slide-header">
+                        <span class="page-num">06</span>
+                        <span class="section-tag">The Blueprint in Action</span>
+                    </div>
+                    <div class="bp-table-wrap-full reveal">
+                        <table class="bp-table-full">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Type</th>
+                                    <th>I Did</th>
+                                    <th>AI Did</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Fetch</td><td>Skill</td><td>Scanned QR, forwarded</td><td>Playwright scraped content</td></tr>
+                                <tr><td>Interpret</td><td>Skill</td><td>Wrote prompt</td><td>Structured JSON output</td></tr>
+                                <tr><td>Tuning</td><td>Loop</td><td>"This is wrong"</td><td>Fixed prompt, re-ran</td></tr>
+                                <tr><td>Storage</td><td>Skill</td><td>&mdash;</td><td>Auto-save &amp; dedup</td></tr>
+                                <tr><td>Recommend</td><td>Skill+Loop</td><td>"Why show this?"</td><td>Added size filtering</td></tr>
+                                <tr><td>Q&amp;A</td><td>Agent</td><td>Seller asks</td><td>Search + answer</td></tr>
+                                <tr><td>Timeliness</td><td>Hook</td><td>&mdash;</td><td>Auto-tag deadlines</td></tr>
+                                <tr><td>Update</td><td>Hook</td><td>"Update daily catch"</td><td>Full pipeline ran</td></tr>
+                                <tr><td>Deploy</td><td>Agent</td><td>"Deploy"</td><td>Generated files</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 7: TAKEAWAYS + WHAT'S NEXT ===== -->
+            <section class="slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <div class="slide-header">
+                        <span class="page-num">07</span>
+                        <span class="section-tag">Wrap Up</span>
+                    </div>
+                    <div class="takeaways-grid">
+                        <div class="reveal-left">
+                            <div class="ta-section-title">Key Takeaways</div>
+                            <ul class="ta-list">
+                                <li class="ta-item">
+                                    <span class="ta-num">01</span>
+                                    <span class="ta-text">You don't need to code to build a product.<span class="secondary">Decompose problems, describe expectations, judge outputs.</span></span>
+                                </li>
+                                <li class="ta-item">
+                                    <span class="ta-num">02</span>
+                                    <span class="ta-text">AI collaboration has structure.<span class="secondary">Skills, Hooks, Loops, Agents &mdash; not just "chat with AI."</span></span>
+                                </li>
+                                <li class="ta-item">
+                                    <span class="ta-num">03</span>
+                                    <span class="ta-text">Blueprint first, build second.<span class="secondary">Decide what pattern each phase needs before you start.</span></span>
+                                </li>
+                                <li class="ta-item">
+                                    <span class="ta-num">04</span>
+                                    <span class="ta-text">Ship an MVP, then iterate.<span class="secondary">245 articles processed. Working product beats perfect plan.</span></span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="reveal">
+                            <div class="ta-section-title">What's Next</div>
+                            <ul class="next-list">
+                                <li class="next-item">
+                                    <div>
+                                        <span class="next-title">Real AI Q&amp;A</span>
+                                        <p class="next-desc">Conversational agent answering seller questions from article content.</p>
+                                    </div>
+                                </li>
+                                <li class="next-item">
+                                    <div>
+                                        <span class="next-title">UAT</span>
+                                        <p class="next-desc">Put in front of real sellers, collect feedback, validate value.</p>
+                                    </div>
+                                </li>
+                                <li class="next-item">
+                                    <div>
+                                        <span class="next-title">Reading Analytics</span>
+                                        <p class="next-desc">Which domains, which seller segments engage most.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Edit mode -->
+    <div class="edit-hotzone" id="editHotzone"></div>
+    <button class="edit-toggle" id="editToggle" title="Edit mode (E)">&#9998;</button>
+
+    <script>
+        /* ===========================================
+           SLIDE PRESENTATION CONTROLLER
+           =========================================== */
+        class SlidePresentation {
+            constructor() {
+                this.slides = document.querySelectorAll('.slide');
+                this.currentSlide = 0;
+                this.stage = document.getElementById('deckStage');
+                this.progressBar = document.getElementById('progressBar');
+                this.pageCounter = document.getElementById('pageCounter');
+                this.setupStageScale();
+                this.setupKeyboardNav();
+                this.setupTouchNav();
+                this.setupWheelNav();
+                this.showSlide(0);
+            }
+
+            setupStageScale() {
+                const scale = () => {
+                    const vw = window.innerWidth, vh = window.innerHeight;
+                    const factor = Math.min(vw / 1920, vh / 1080);
+                    const x = (vw - 1920 * factor) / 2;
+                    const y = (vh - 1080 * factor) / 2;
+                    this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+                };
+                scale();
+                window.addEventListener('resize', scale);
+            }
+
+            setupKeyboardNav() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.getAttribute('contenteditable')) return;
+                    switch(e.key) {
+                        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+                            e.preventDefault(); this.next(); break;
+                        case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+                            e.preventDefault(); this.prev(); break;
+                        case 'Home': e.preventDefault(); this.showSlide(0); break;
+                        case 'End': e.preventDefault(); this.showSlide(this.slides.length - 1); break;
+                    }
+                });
+            }
+
+            setupTouchNav() {
+                let startX = 0;
+                this.stage.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; });
+                this.stage.addEventListener('touchend', (e) => {
+                    const dx = e.changedTouches[0].clientX - startX;
+                    if (Math.abs(dx) > 50) { dx < 0 ? this.next() : this.prev(); }
+                });
+            }
+
+            setupWheelNav() {
+                let t = null;
+                document.addEventListener('wheel', (e) => {
+                    if (t) return;
+                    t = setTimeout(() => { t = null; }, 600);
+                    e.deltaY > 0 ? this.next() : this.prev();
+                });
+            }
+
+            next() { this.showSlide(this.currentSlide + 1); }
+            prev() { this.showSlide(this.currentSlide - 1); }
+
+            showSlide(index) {
+                this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+                this.slides.forEach((slide, i) => {
+                    const isActive = i === this.currentSlide;
+                    slide.classList.toggle('active', isActive);
+                    slide.classList.toggle('visible', isActive);
+                });
+                this.progressBar.style.width = ((this.currentSlide) / (this.slides.length - 1)) * 100 + '%';
+                this.pageCounter.textContent = `${this.currentSlide + 1} / ${this.slides.length}`;
+            }
+        }
+
+        const deck = new SlidePresentation();
+
+        /* ===========================================
+           INLINE EDITING
+           =========================================== */
+        class InlineEditor {
+            constructor() {
+                this.isActive = false;
+                this.toggle = document.getElementById('editToggle');
+                this.hotzone = document.getElementById('editHotzone');
+                this.setupHover();
+                this.setupClick();
+                this.setupKeyboard();
+            }
+            setupHover() {
+                let h = null;
+                this.hotzone.addEventListener('mouseenter', () => { clearTimeout(h); this.toggle.classList.add('show'); });
+                this.hotzone.addEventListener('mouseleave', () => { h = setTimeout(() => { if (!this.isActive) this.toggle.classList.remove('show'); }, 400); });
+                this.toggle.addEventListener('mouseenter', () => { clearTimeout(h); });
+                this.toggle.addEventListener('mouseleave', () => { h = setTimeout(() => { if (!this.isActive) this.toggle.classList.remove('show'); }, 400); });
+            }
+            setupClick() {
+                this.toggle.addEventListener('click', () => this.toggleEditMode());
+                this.hotzone.addEventListener('click', () => this.toggleEditMode());
+            }
+            setupKeyboard() {
+                document.addEventListener('keydown', (e) => {
+                    if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable') && !e.ctrlKey && !e.metaKey) this.toggleEditMode();
+                    if (e.ctrlKey && e.key === 's') { e.preventDefault(); this.save(); }
+                });
+            }
+            toggleEditMode() {
+                this.isActive = !this.isActive;
+                this.toggle.classList.toggle('active', this.isActive);
+                document.querySelectorAll('.slide-title, .cover-title, .cover-subtitle, .pq-q, .pq-a, .pipe-title, .pipe-desc, .ta-text, .next-title, .next-desc, .demo-title, .demo-subtitle, .problem-pain, .insight-box p, .blueprint-intro, .closing-line, .solution-tagline').forEach(el => {
+                    el.contentEditable = this.isActive;
+                    el.style.outline = this.isActive ? '1px dashed rgba(255,98,0,0.4)' : 'none';
+                });
+            }
+            save() {
+                const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'show_and_tell.html';
+                a.click();
+            }
+        }
+
+        const editor = new InlineEditor();
+    </script>
+</body>
+</html>
