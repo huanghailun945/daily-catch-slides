@@ -46,7 +46,27 @@
         .slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; }
         .slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
         img, video, canvas, svg { max-width: 100%; max-height: 100%; }
-        @media print { html, body { width: 1920px; height: auto; overflow: visible; } .deck-viewport { position: static; overflow: visible; } .deck-stage { position: static; width: auto; height: auto; transform: none !important; } .slide { position: relative; display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; width: 1920px; height: 1080px; break-after: page; } .slide:last-child { break-after: auto; } }
+        @media print {
+            @page { size: 297mm 167.0625mm; margin: 0; }
+            html, body {
+                width: 297mm; height: 167.0625mm; overflow: visible;
+                background: #161d26 !important;
+                -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            }
+            .progress-bar, .page-counter, .edit-hotzone, .edit-toggle { display: none !important; }
+            .deck-viewport { position: static; overflow: visible; width: 297mm; height: auto; }
+            .deck-stage { position: static !important; width: 297mm !important; height: auto !important; transform: none !important; overflow: visible; }
+            .slide {
+                position: relative !important; display: flex !important;
+                visibility: visible !important; opacity: 1 !important;
+                pointer-events: auto !important;
+                width: 297mm !important; height: 167.0625mm !important;
+                overflow: hidden; break-after: page; page-break-after: always;
+            }
+            .slide:last-child { break-after: auto; page-break-after: auto; }
+            .reveal, .reveal-left { opacity: 1 !important; transform: none !important; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; } }
 
         /* ===========================================
@@ -250,6 +270,15 @@
             white-space: nowrap;
         }
 
+        .fragment {
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .fragment.shown {
+            opacity: 1;
+        }
+
         .problem-pain {
             font-family: var(--font-display);
             font-weight: 400;
@@ -337,7 +366,45 @@
         }
 
         /* ===========================================
-           SLIDE 3: BEFORE & AFTER
+           SLIDE 3: VOICE OF SELLER
+           =========================================== */
+        .vos-list {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            flex: 1;
+        }
+
+        .vos-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--orange);
+            border-radius: 0 14px 14px 0;
+            padding: 28px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .vos-quote {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 28px;
+            color: var(--text);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .vos-who {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--orange);
+            margin-top: auto;
+        }
+
+        /* ===========================================
+           SLIDE 4: BEFORE & AFTER
            =========================================== */
         .before-after-grid {
             display: grid;
@@ -419,6 +486,46 @@
             font-size: 48px;
             color: var(--orange);
             text-align: center;
+        }
+
+        .stage-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin: 14px 0;
+        }
+
+        .stage-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            text-align: center;
+        }
+
+        .stage-card-label {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--orange);
+        }
+
+        .stage-card-goal {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text);
+        }
+
+        .stage-card-examples {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 14px;
+            color: var(--text-dim);
+            line-height: 1.4;
         }
 
         .ba-bottom {
@@ -963,11 +1070,11 @@
                     <div class="problem-questions">
                         <div class="pq-item reveal">
                             <span class="pq-q">How many seller-facing official WeChat accounts does Amazon have?</span>
-                            <span class="pq-a">&rarr; 8 <span style="font-size:16px; font-weight:400; color:rgba(255,255,255,0.5)">(AGS&times;3, Ads&times;2, AGL&times;2, AWS&times;1)</span></span>
+                            <span class="pq-a fragment">&rarr; 8 <span style="font-size:16px; font-weight:400; color:rgba(255,255,255,0.5)">(AGS&times;3, Ads&times;2, AGL&times;2, Amazon CN&times;1)</span></span>
                         </div>
                         <div class="pq-item reveal">
                             <span class="pq-q">How many articles do they publish per week?</span>
-                            <span class="pq-a">&rarr; 20+</span>
+                            <span class="pq-a fragment">&rarr; 20+</span>
                         </div>
                         <div class="pq-item reveal">
                             <span class="pq-q">Have you &mdash; honestly &mdash; read all of them?</span>
@@ -980,7 +1087,33 @@
                 </div>
             </section>
 
-            <!-- ===== SLIDE 3: THE SOLUTION (Before & After) ===== -->
+            <!-- ===== SLIDE 3: VOICE OF SELLER ===== -->
+            <section class="slide">
+                <div class="slide-bg"></div>
+                <div class="slide-pad">
+                    <div class="slide-header">
+                        <span class="page-num">03</span>
+                        <span class="section-tag">Voice of Seller</span>
+                    </div>
+                    <h2 class="slide-title reveal" style="font-size:52px; margin-bottom:40px;">Voice of Seller</h2>
+                    <div class="vos-list">
+                        <div class="vos-card reveal">
+                            <span class="vos-quote">"I never followed any official Amazon accounts. I don't even know where to get the information."</span>
+                            <span class="vos-who">— Prospect, considering opening a store</span>
+                        </div>
+                        <div class="vos-card reveal">
+                            <span class="vos-quote">"I do follow them, but I only read an article if it happens to pop up. Too many articles, too long. I never sit down and read them all."</span>
+                            <span class="vos-who">— New seller, NA, 8 months</span>
+                        </div>
+                        <div class="vos-card reveal">
+                            <span class="vos-quote">"I just want to know: what are the 3 things this week that actually affect MY business? I don't need 20 articles — just the ones that matter to me."</span>
+                            <span class="vos-who">— Brand owner, JP + NA, 4 years</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== SLIDE 4: THE SOLUTION (Before & After) ===== -->
             <section class="slide">
                 <div class="slide-bg"></div>
                 <div class="slide-pad">
@@ -1007,8 +1140,28 @@
                             <ul class="ba-list">
                                 <li><strong>Interpret</strong> — AI pulls out what matters: summary, action items, deadline</li>
                                 <li><strong>Classify</strong> — Must Read / Recommended / Others, by domain</li>
-                                <li><strong>Personalize</strong> — Your marketplace, your fulfillment type, your product category — the feed adapts to you</li>
+                                <li><strong>Personalize</strong> — Adapts to WHO you are:</li>
+                            </ul>
+                            <div class="stage-cards">
+                                <div class="stage-card">
+                                    <span class="stage-card-label">Prospects</span>
+                                    <span class="stage-card-goal">Onboarding</span>
+                                    <span class="stage-card-examples">Store setup, beginner guides, success stories</span>
+                                </div>
+                                <div class="stage-card">
+                                    <span class="stage-card-label">New Sellers</span>
+                                    <span class="stage-card-goal">Feature Adoption</span>
+                                    <span class="stage-card-examples">FBA, Ads basics, Listing optimization, compliance</span>
+                                </div>
+                                <div class="stage-card">
+                                    <span class="stage-card-label">Existing Sellers</span>
+                                    <span class="stage-card-goal">Expand & Grow</span>
+                                    <span class="stage-card-examples">New markets, brand building, promotions, advanced ads</span>
+                                </div>
+                            </div>
+                            <ul class="ba-list" style="margin-top:14px">
                                 <li><strong>Deliver</strong> — One page. Everything you need, filtered and ranked</li>
+                                <li><strong>Ask</strong> — Have a question? Ask AI on the page. It answers based on a knowledge graph built from all articles</li>
                             </ul>
                         </div>
                     </div>
@@ -1255,8 +1408,24 @@
                 });
             }
 
-            next() { this.showSlide(this.currentSlide + 1); }
-            prev() { this.showSlide(this.currentSlide - 1); }
+            next() {
+                const currentSlideEl = this.slides[this.currentSlide];
+                const hiddenFragments = currentSlideEl.querySelectorAll('.fragment:not(.shown)');
+                if (hiddenFragments.length > 0) {
+                    hiddenFragments[0].classList.add('shown');
+                    return;
+                }
+                this.showSlide(this.currentSlide + 1);
+            }
+            prev() {
+                const currentSlideEl = this.slides[this.currentSlide];
+                const shownFragments = currentSlideEl.querySelectorAll('.fragment.shown');
+                if (shownFragments.length > 0) {
+                    shownFragments[shownFragments.length - 1].classList.remove('shown');
+                    return;
+                }
+                this.showSlide(this.currentSlide - 1);
+            }
 
             showSlide(index) {
                 this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
